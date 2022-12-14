@@ -13,7 +13,7 @@ import (
 type kalpavrikshaConfig struct {
 	NumberOfDirs  int64 // Number of directories to be created
 	NumberOfFiles int64 // Number of files to be created
-	FileSizeInMB  int64 // Size of each file to be created
+	FileSize      int64 // Size of each file to be created
 	Parallelism   int   // Number of threads to run in parallel
 
 	InputTypeStr string     // Type of input in string : Zero / Rand / File
@@ -32,6 +32,8 @@ type kalpavrikshaConfig struct {
 	jobs      chan workItem  // Channel holding jobs to be performed
 	results   chan workItem  // Channel holding jobs which are done
 	wgWorkers sync.WaitGroup // Wait group for all workers
+
+	src dataSource // Source of data for input
 }
 
 // global variable holding all of the config

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -84,4 +85,10 @@ func testConnectionByList() error {
 	}
 
 	return nil
+}
+
+func createFileOnStorage(name string, data []byte) error {
+	blockBlobClient := config.StorageClient.NewBlockBlobClient(filepath.Join(config.DestinationPath, name))
+	_, err := blockBlobClient.UploadBuffer(context.TODO(), data, nil)
+	return err
 }

@@ -26,6 +26,12 @@ func main() {
 		return
 	}
 
+	config.src, err = createDataSource()
+	if err != nil {
+		fmt.Println("failed to create data source.", err.Error())
+		return
+	}
+
 	startWorkers()
 	fmt.Println("Kalpavrikhsa completed")
 }
@@ -35,7 +41,7 @@ func init() {
 
 	flag.Int64Var(&config.NumberOfDirs, "dirs", 1, "Number of directories to be created")
 	flag.Int64Var(&config.NumberOfFiles, "files", 1, "Number of files to be created per directory")
-	flag.Int64Var(&config.FileSizeInMB, "size", 1, "Size of each file to be created")
+	flag.Int64Var(&config.FileSize, "size", 1, "Size of each file to be created")
 	flag.IntVar(&config.Parallelism, "concurrency", 64, "Number of threads to run in parllel")
 
 	flag.StringVar(&config.InputTypeStr, "type", "random", "Type of source ZERO / RANDOM / FILE")
