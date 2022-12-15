@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"fmt"
 	"math/rand"
 	"os"
@@ -11,11 +12,18 @@ import (
 type dataSource interface {
 	Init(i interface{}) error
 	GetData(size uint64) ([]byte, error)
+	GetMd5Sum(data []byte) []byte
+}
+
+func getMD5Sum(data []byte) []byte {
+	x := md5.Sum(data)
+	return x[:]
 }
 
 //-------------------------------------------------------------------
 
 type zeroDataSource struct {
+	md5sum []byte
 }
 
 func (zds *zeroDataSource) Init(i interface{}) error {
@@ -25,6 +33,10 @@ func (zds *zeroDataSource) Init(i interface{}) error {
 func (zds *zeroDataSource) GetData(size uint64) ([]byte, error) {
 	data := make([]byte, size)
 	return data, nil
+}
+
+func (zds *zeroDataSource) GetMd5Sum(data []byte) []byte {
+	return zds.md5sum
 }
 
 // -------------------------------------------------------------------
@@ -51,26 +63,38 @@ func (rds *randomDataSource) GetData(size uint64) ([]byte, error) {
 	return data, nil
 }
 
+func (rds *randomDataSource) GetMd5Sum(data []byte) []byte {
+	return getMD5Sum(data)
+}
+
 // -------------------------------------------------------------------
+type fileDataSourceConfig struct {
+	filename string
+	filesize int64
+}
+
 type fileDataSource struct {
-	filePath string
-	data     []byte
+	fileDataSourceConfig
+	data   []byte
+	md5sum []byte
 }
 
 func (fds *fileDataSource) Init(i interface{}) error {
-	fds.filePath = i.(string)
-	f, err := os.Open(fds.filePath)
+	fds.fileDataSourceConfig = i.(fileDataSourceConfig)
+	f, err := os.Open(fds.filename)
 	if err != nil {
 		return err
 	}
 
-	data := make([]byte, config.FileSize)
+	data := make([]byte, fds.filesize)
 	_, err = f.Read(data)
 	if err != nil {
 		return err
 	}
 
 	f.Close()
+
+	fds.md5sum = getMD5Sum(data)
 	return nil
 }
 
@@ -78,17 +102,23 @@ func (fds *fileDataSource) GetData(size uint64) ([]byte, error) {
 	return fds.data, nil
 }
 
+func (fds *fileDataSource) GetMd5Sum(data []byte) []byte {
+	return fds.md5sum
+}
+
 //-------------------------------------------------------------------
 
-func createDataSource() (dataSource, error) {
-	t := config.InputType
+func createDataSource(t SourceType) (dataSource, error) {
 	if t == ESourceType.ZERO() {
 		return &zeroDataSource{}, nil
 	} else if t == ESourceType.RANDOM() {
 		return &randomDataSource{}, nil
 	} else if t == ESourceType.FILE() {
 		f := &fileDataSource{}
-		err := f.Init(config.SourceFilePath)
+		err := f.Init(fileDataSourceConfig{
+			filename: config.SourceFilePath,
+			filesize: config.FileSize,
+		})
 		if err != nil {
 			return nil, err
 		}

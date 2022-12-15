@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	//"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 )
 
 func main() {
@@ -11,22 +10,23 @@ func main() {
 
 	// Parse the user config
 	flag.Parse()
+	var err error
 
 	// Sanitize the config
-	if err := sanitizeConfig(); err != nil {
+	if err = sanitizeConfig(); err != nil {
 		// In case of any config failure, terminate
 		fmt.Println("invalid config.", err.Error())
 		flag.Usage()
 		return
 	}
 
-	err := setupStorageConnection()
+	kalpavriksha.storage, err = createStorage(EStorageType.BLOB(), config.StorageConfig)
 	if err != nil {
 		fmt.Println("failed to connect to storaged.", err.Error())
 		return
 	}
 
-	config.src, err = createDataSource()
+	kalpavriksha.dataSrc, err = createDataSource(config.InputType)
 	if err != nil {
 		fmt.Println("failed to create data source.", err.Error())
 		return
@@ -50,4 +50,7 @@ func init() {
 	flag.StringVar(&config.DestinationPath, "dst-path", "", "Destination path after the container where files will be created")
 
 	flag.StringVar(&config.StorageEndPoint, "acct-type", "blob", "Stroage account type")
+
+	flag.BoolVar(&config.UpdateMD5, "md5", false, "Set MD5 Sum on upload")
+	flag.StringVar(&config.Tier, "tier", "none", "Tier to be set for each file")
 }

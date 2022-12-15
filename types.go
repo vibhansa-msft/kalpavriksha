@@ -2,42 +2,9 @@ package main
 
 import (
 	"reflect"
-	"sync"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/JeffreyRichter/enum/enum"
 )
-
-// ------------------------------------------------------------------
-// kalpavrikshaConfig : config structure for the tool
-type kalpavrikshaConfig struct {
-	NumberOfDirs  int64 // Number of directories to be created
-	NumberOfFiles int64 // Number of files to be created
-	FileSize      int64 // Size of each file to be created
-	Parallelism   int   // Number of threads to run in parallel
-
-	InputTypeStr string     // Type of input in string : Zero / Rand / File
-	InputType    SourceType // Type of input : Zero / Rand / File
-
-	SourceFilePath  string // In case of input is coming from a file, path to that file
-	DestinationPath string // Provide destination path (post container)
-
-	StorageAccountName      string // Name of the destination storage account
-	StorageAccountKey       string // Key of the destination storage account
-	StorageEndPoint         string // Type of storage account blob/dfs
-	StorageAccountContainer string // Destination container in the storage account
-
-	StorageClient *container.Client // Client to hold storage connection
-
-	jobs      chan workItem  // Channel holding jobs to be performed
-	results   chan workItem  // Channel holding jobs which are done
-	wgWorkers sync.WaitGroup // Wait group for all workers
-
-	src dataSource // Source of data for input
-}
-
-// global variable holding all of the config
-var config kalpavrikshaConfig
 
 // ------------------------------------------------------------------
 // Input Source Type

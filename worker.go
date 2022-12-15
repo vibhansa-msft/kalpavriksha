@@ -13,13 +13,13 @@ type workItem struct {
 }
 
 func startWorkers() {
-	config.wgWorkers = sync.WaitGroup{}
+	kalpavriksha.wgWorkers = sync.WaitGroup{}
 
-	config.jobs = make(chan workItem, config.Parallelism*2)
-	config.results = make(chan workItem, config.Parallelism*2)
+	kalpavriksha.jobs = make(chan workItem, config.Parallelism*2)
+	kalpavriksha.results = make(chan workItem, config.Parallelism*2)
 
 	for w := 1; w <= config.Parallelism; w++ {
-		config.wgWorkers.Add(1)
+		kalpavriksha.wgWorkers.Add(1)
 		go uploadWorker(w)
 	}
 
@@ -28,7 +28,7 @@ func startWorkers() {
 	pendingCount := config.NumberOfDirs * config.NumberOfFiles
 	completecount := int64(0)
 
-	for job := range config.results {
+	for job := range kalpavriksha.results {
 		completecount++
 
 		fmt.Printf("Worker %d => %s : %s (%s), job Completion %0.2f\n",
@@ -36,39 +36,41 @@ func startWorkers() {
 			float64(completecount)*100/float64(pendingCount))
 
 		if completecount == pendingCount {
-			close(config.results)
+			close(kalpavriksha.results)
 		}
 	}
 
-	config.wgWorkers.Wait()
+	kalpavriksha.wgWorkers.Wait()
 }
 
 func createJobs() {
 	for d := (int64)(0); d < config.NumberOfDirs; d++ {
 		for f := (int64)(0); f < config.NumberOfFiles; f++ {
-			config.jobs <- workItem{
+			kalpavriksha.jobs <- workItem{
 				path:    fmt.Sprintf("dir-%d/file-%d", d, f),
 				objtype: EObjectType.FILE(),
 				status:  EJobStatusType.WAIT(),
 			}
 		}
 	}
-	close(config.jobs)
+	close(kalpavriksha.jobs)
 }
 
 func uploadWorker(w int) {
-	defer config.wgWorkers.Done()
-	for job := range config.jobs {
+	defer kalpavriksha.wgWorkers.Done()
+	for job := range kalpavriksha.jobs {
 		//fmt.Printf("(%d) %s\n", w, job.path)
 		job.workerId = w
 
 		job.status = EJobStatusType.INPROGRESS()
 
-		data, err := config.src.GetData(uint64(config.FileSize))
+		data, err := kalpavriksha.dataSrc.GetData(uint64(config.FileSize))
 		if err != nil {
 			job.status = EJobStatusType.FAILED()
 		} else {
-			err := createFileOnStorage(job.path, data)
+
+			opt := getUploadOptions(data)
+			err := kalpavriksha.storage.UploadData(job.path, data, opt)
 			if err != nil {
 				job.status = EJobStatusType.FAILED()
 			} else {
@@ -76,6 +78,24 @@ func uploadWorker(w int) {
 			}
 		}
 
-		config.results <- job
+		kalpavriksha.results <- job
 	}
+}
+
+func getUploadOptions(data []byte) *UploadOptions {
+	if config.UpdateMD5 == true || config.Tier != "none" {
+		opt := &UploadOptions{}
+
+		if config.UpdateMD5 {
+			opt.MD5Sum = kalpavriksha.dataSrc.GetMd5Sum(data)
+		}
+
+		if config.Tier != "none" {
+			opt.Tier = &config.BlobTier
+		}
+
+		return opt
+	}
+
+	return nil
 }
