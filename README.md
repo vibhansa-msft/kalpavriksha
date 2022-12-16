@@ -35,3 +35,7 @@ Generate test data directly in your storage account.
 - Below command generated 100 directories each filled with 100 files each and each file of size 5MB. All this data will be stored in "dir1" in the container and each file will have its md5sum set with blob being in "cool" tier.
     
         -- .\kalpavriksha.exe --dirs 100 --files 100 --size 5 --tier "cool" --type "random" --dst-path "dir1" --concurrency 10 --md5 true
+
+-- To delete any previously generated test data
+
+        -- .\kalpavriksha.exe --dirs 100 --files 100 --dst-path "dir1" --concurrency 10 --delete true
