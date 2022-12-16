@@ -21,7 +21,8 @@ Generate test data directly in your storage account.
 - --acct-type \<type\> : As of now only Blob type is supported
 - --md5 true|false : Compute and set MD5 Sum for each file uploaded to container.
 - --tier \<tier\> : Tier to be set for each file uploaded to container.
-- --delete true|false : Instead of generating the data, delete previously generated data using this tool
+- --delete true|false : Delete previously generated data using this tool
+- --set-tier true|false : Change tier of previously generated data set. Provie --tier parameter along with this.
 
 ## Environment Variables
 
@@ -36,6 +37,10 @@ Generate test data directly in your storage account.
     
         -- .\kalpavriksha.exe --dirs 100 --files 100 --size 5 --tier "cool" --type "random" --dst-path "dir1" --concurrency 10 --md5 true
 
--- To delete any previously generated test data
+- To delete any previously generated data set
 
         -- .\kalpavriksha.exe --dirs 100 --files 100 --dst-path "dir1" --concurrency 10 --delete true
+
+- To change tier of previously generated data set
+
+        -- .\kalpavriksha.exe --dirs 100 --files 100 --dst-path "dir1" --concurrency 10 --tier hot --set-tier true

@@ -22,6 +22,8 @@ func startWorkers() {
 		kalpavriksha.wgWorkers.Add(1)
 		if config.Delete {
 			go deleteWorker(w)
+		} else if config.SetTier {
+			go tierWorker(w)
 		} else {
 			go uploadWorker(w)
 		}
@@ -114,6 +116,26 @@ func deleteWorker(w int) {
 		job.status = EJobStatusType.INPROGRESS()
 
 		err := kalpavriksha.storage.Delete(job.path, nil)
+		if err != nil {
+			job.status = EJobStatusType.FAILED()
+		} else {
+			job.status = EJobStatusType.SUCCESS()
+		}
+
+		kalpavriksha.results <- job
+	}
+}
+
+// worker to change tier of given data set
+func tierWorker(w int) {
+	defer kalpavriksha.wgWorkers.Done()
+	for job := range kalpavriksha.jobs {
+		//fmt.Printf("(%d) %s\n", w, job.path)
+		job.workerId = w
+
+		job.status = EJobStatusType.INPROGRESS()
+
+		err := kalpavriksha.storage.SetTier(job.path, config.BlobTier)
 		if err != nil {
 			job.status = EJobStatusType.FAILED()
 		} else {

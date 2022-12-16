@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
@@ -84,5 +85,11 @@ func (bs *BlobStorage) Delete(name string, o *DeleteOptions) error {
 
 	_, err := blockBlobClient.Delete(context.TODO(), opts)
 
+	return err
+}
+
+func (bs *BlobStorage) SetTier(name string, tier blob.AccessTier) error {
+	blockBlobClient := bs.StorageClient.NewBlockBlobClient(filepath.Join(bs.DestinationPath, name))
+	_, err := blockBlobClient.SetTier(context.TODO(), tier, nil)
 	return err
 }

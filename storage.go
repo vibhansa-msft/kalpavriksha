@@ -79,6 +79,7 @@ type Storage interface {
 	TestConnection() error
 	UploadData(name string, data []byte, o *UploadOptions) error
 	Delete(name string, o *DeleteOptions) error
+	SetTier(name string, tier blob.AccessTier) error
 }
 
 func setupLogging() {

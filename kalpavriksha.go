@@ -55,4 +55,5 @@ func init() {
 	flag.StringVar(&config.Tier, "tier", "none", "Tier to be set for each file")
 
 	flag.BoolVar(&config.Delete, "delete", false, "Delete the data set instead of generation")
+	flag.BoolVar(&config.SetTier, "set-tier", false, "Change the tier of previously generated dataset")
 }
