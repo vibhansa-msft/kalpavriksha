@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -11,7 +12,7 @@ import (
 // -------------------------------------------------------------------
 type dataSource interface {
 	Init(i interface{}) error
-	GetData(size uint64) ([]byte, error)
+	GetData() ([]byte, error)
 	GetMd5Sum(data []byte) []byte
 }
 
@@ -23,18 +24,20 @@ func getMD5Sum(data []byte) []byte {
 //-------------------------------------------------------------------
 
 type zeroDataSource struct {
+	size   int64
 	md5sum []byte
 	data   []byte
 }
 
 func (zds *zeroDataSource) Init(i interface{}) error {
 	size := i.(int64)
+	zds.size = size
 	zds.data = make([]byte, size)
 	zds.md5sum = getMD5Sum(zds.data)
 	return nil
 }
 
-func (zds *zeroDataSource) GetData(size uint64) ([]byte, error) {
+func (zds *zeroDataSource) GetData() ([]byte, error) {
 	return zds.data, nil
 }
 
@@ -44,14 +47,23 @@ func (zds *zeroDataSource) GetMd5Sum(data []byte) []byte {
 
 // -------------------------------------------------------------------
 type randomDataSource struct {
+	size int64
 }
 
 func (rds *randomDataSource) Init(i interface{}) error {
 	rand.Seed(time.Now().UnixNano())
+	size := i.(int64)
+	rds.size = size
 	return nil
 }
 
-func (rds *randomDataSource) GetData(size uint64) ([]byte, error) {
+func (rds *randomDataSource) GetData() ([]byte, error) {
+	size := rds.size
+	if size < 0 {
+		// Negative value means generate a random number upto size and create file of that size
+		size = rand.Int63n(int64(math.Abs(float64(rds.size))))
+	}
+
 	data := make([]byte, size)
 	n, err := rand.Read(data)
 
@@ -59,7 +71,7 @@ func (rds *randomDataSource) GetData(size uint64) ([]byte, error) {
 		return nil, err
 	}
 
-	if uint64(n) != size {
+	if int64(n) != size {
 		return nil, fmt.Errorf("failed to generate data of size %v (generated only %v)", size, n)
 	}
 
@@ -105,7 +117,7 @@ func (fds *fileDataSource) Init(i interface{}) error {
 	return nil
 }
 
-func (fds *fileDataSource) GetData(size uint64) ([]byte, error) {
+func (fds *fileDataSource) GetData() ([]byte, error) {
 	return fds.data, nil
 }
 
@@ -125,7 +137,12 @@ func createDataSource(t SourceType) (dataSource, error) {
 		return f, nil
 
 	} else if t == ESourceType.RANDOM() {
-		return &randomDataSource{}, nil
+		f := &randomDataSource{}
+		err := f.Init(config.FileSize)
+		if err != nil {
+			return nil, err
+		}
+		return f, nil
 
 	} else if t == ESourceType.FILE() {
 		f := &fileDataSource{}

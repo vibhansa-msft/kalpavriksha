@@ -8,7 +8,7 @@ Generate test data directly in your storage account.
 
 - --dirs n : Number of directories to be generated
 - --files n : Number of files to be generated in each directory
-- --size n : Size of each file in MBs
+- --size n : Size of each file in MBs. 0 will create files with 0 size. Negative value here means file of various sizes upto |n| (0 - n) will be created.
 - --concurrency n : Number of files being uploaded in parallel
 - --type [ZERO/RANDOM/FILE] : Type of data to be written in each file. 
  

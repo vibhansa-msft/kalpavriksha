@@ -71,7 +71,7 @@ func uploadWorker(w int) {
 
 		job.status = EJobStatusType.INPROGRESS()
 
-		data, err := kalpavriksha.dataSrc.GetData(uint64(config.FileSize))
+		data, err := kalpavriksha.dataSrc.GetData()
 		if err != nil {
 			job.status = EJobStatusType.FAILED()
 		} else {
