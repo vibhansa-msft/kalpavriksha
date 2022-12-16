@@ -24,15 +24,18 @@ func getMD5Sum(data []byte) []byte {
 
 type zeroDataSource struct {
 	md5sum []byte
+	data   []byte
 }
 
 func (zds *zeroDataSource) Init(i interface{}) error {
+	size := i.(int64)
+	zds.data = make([]byte, size)
+	zds.md5sum = getMD5Sum(zds.data)
 	return nil
 }
 
 func (zds *zeroDataSource) GetData(size uint64) ([]byte, error) {
-	data := make([]byte, size)
-	return data, nil
+	return zds.data, nil
 }
 
 func (zds *zeroDataSource) GetMd5Sum(data []byte) []byte {
@@ -114,9 +117,16 @@ func (fds *fileDataSource) GetMd5Sum(data []byte) []byte {
 
 func createDataSource(t SourceType) (dataSource, error) {
 	if t == ESourceType.ZERO() {
-		return &zeroDataSource{}, nil
+		f := &zeroDataSource{}
+		err := f.Init(config.FileSize)
+		if err != nil {
+			return nil, err
+		}
+		return f, nil
+
 	} else if t == ESourceType.RANDOM() {
 		return &randomDataSource{}, nil
+
 	} else if t == ESourceType.FILE() {
 		f := &fileDataSource{}
 		err := f.Init(fileDataSourceConfig{
