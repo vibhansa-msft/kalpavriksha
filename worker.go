@@ -20,7 +20,11 @@ func startWorkers() {
 
 	for w := 1; w <= config.Parallelism; w++ {
 		kalpavriksha.wgWorkers.Add(1)
-		go uploadWorker(w)
+		if config.Delete {
+			go deleteWorker(w)
+		} else {
+			go uploadWorker(w)
+		}
 	}
 
 	go createJobs()
@@ -56,6 +60,7 @@ func createJobs() {
 	close(kalpavriksha.jobs)
 }
 
+// Workers for upload task
 func uploadWorker(w int) {
 	defer kalpavriksha.wgWorkers.Done()
 	for job := range kalpavriksha.jobs {
@@ -68,7 +73,6 @@ func uploadWorker(w int) {
 		if err != nil {
 			job.status = EJobStatusType.FAILED()
 		} else {
-
 			opt := getUploadOptions(data)
 			err := kalpavriksha.storage.UploadData(job.path, data, opt)
 			if err != nil {
@@ -98,4 +102,24 @@ func getUploadOptions(data []byte) *UploadOptions {
 	}
 
 	return nil
+}
+
+// Workers for delete task
+func deleteWorker(w int) {
+	defer kalpavriksha.wgWorkers.Done()
+	for job := range kalpavriksha.jobs {
+		//fmt.Printf("(%d) %s\n", w, job.path)
+		job.workerId = w
+
+		job.status = EJobStatusType.INPROGRESS()
+
+		err := kalpavriksha.storage.Delete(job.path, nil)
+		if err != nil {
+			job.status = EJobStatusType.FAILED()
+		} else {
+			job.status = EJobStatusType.SUCCESS()
+		}
+
+		kalpavriksha.results <- job
+	}
 }

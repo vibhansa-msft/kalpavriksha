@@ -22,7 +22,7 @@ func main() {
 
 	kalpavriksha.storage, err = createStorage(EStorageType.BLOB(), config.StorageConfig)
 	if err != nil {
-		fmt.Println("failed to connect to storaged.", err.Error())
+		fmt.Println("failed to connect to storage.", err.Error())
 		return
 	}
 
@@ -53,4 +53,6 @@ func init() {
 
 	flag.BoolVar(&config.UpdateMD5, "md5", false, "Set MD5 Sum on upload")
 	flag.StringVar(&config.Tier, "tier", "none", "Tier to be set for each file")
+
+	flag.BoolVar(&config.Delete, "delete", false, "Delete the data set instead of generation")
 }

@@ -21,6 +21,7 @@ Generate test data directly in your storage account.
 - --acct-type \<type\> : As of now only Blob type is supported
 - --md5 true|false : Compute and set MD5 Sum for each file uploaded to container.
 - --tier \<tier\> : Tier to be set for each file uploaded to container.
+- --delete true|false : Instead of generating the data, delete previously generated data using this tool
 
 ## Environment Variables
 

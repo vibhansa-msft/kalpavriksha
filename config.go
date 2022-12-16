@@ -23,6 +23,8 @@ type kalpavrikshaConfig struct {
 
 	SourceFilePath string // In case of input is coming from a file, path to that file
 	Tier           string // blob tier to set on upload
+
+	Delete bool // Instead of data generation delete the previously generated data on given path
 }
 
 type Kalpavriksha struct {

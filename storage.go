@@ -71,10 +71,14 @@ type UploadOptions struct {
 	MD5Sum []byte
 }
 
+type DeleteOptions struct {
+}
+
 type Storage interface {
 	Init() error
 	TestConnection() error
 	UploadData(name string, data []byte, o *UploadOptions) error
+	Delete(name string, o *DeleteOptions) error
 }
 
 func setupLogging() {

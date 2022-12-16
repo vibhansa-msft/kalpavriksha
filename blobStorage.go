@@ -73,3 +73,16 @@ func (bs *BlobStorage) UploadData(name string, data []byte, o *UploadOptions) er
 
 	return err
 }
+
+func (bs *BlobStorage) Delete(name string, o *DeleteOptions) error {
+	blockBlobClient := bs.StorageClient.NewBlockBlobClient(filepath.Join(bs.DestinationPath, name))
+
+	opts := &azblob.DeleteBlobOptions{}
+	if o != nil {
+
+	}
+
+	_, err := blockBlobClient.Delete(context.TODO(), opts)
+
+	return err
+}
