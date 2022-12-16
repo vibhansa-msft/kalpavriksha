@@ -86,15 +86,19 @@ func (fds *fileDataSource) Init(i interface{}) error {
 		return err
 	}
 
-	data := make([]byte, fds.filesize)
-	_, err = f.Read(data)
+	fds.data = make([]byte, fds.filesize)
+	n, err := f.Read(fds.data)
 	if err != nil {
 		return err
 	}
 
+	if int64(n) < fds.fileDataSourceConfig.filesize {
+		fmt.Printf("Size : %d, FileSize : %d, remaining will be filled with 0s\n", fds.fileDataSourceConfig.filesize, n)
+	}
+
 	f.Close()
 
-	fds.md5sum = getMD5Sum(data)
+	fds.md5sum = getMD5Sum(fds.data)
 	return nil
 }
 
