@@ -1,8 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
 )
 
 type workItem struct {
@@ -12,15 +18,26 @@ type workItem struct {
 	status   JobStatusType
 }
 
+var WaitCount int64 = 0
+
 func startWorkers() {
 	kalpavriksha.wgWorkers = sync.WaitGroup{}
 
-	kalpavriksha.jobs = make(chan workItem, config.Parallelism*2)
-	kalpavriksha.results = make(chan workItem, config.Parallelism*2)
+	if config.CreateStub {
+		kalpavriksha.jobs = make(chan workItem, 10000000)
+		kalpavriksha.results = make(chan workItem, 10000000)
+	} else {
+		kalpavriksha.jobs = make(chan workItem, config.Parallelism*2)
+		kalpavriksha.results = make(chan workItem, config.Parallelism*2)
+	}
+
+	atomic.AddInt64(&WaitCount, int64(config.Parallelism))
 
 	for w := 1; w <= config.Parallelism; w++ {
 		kalpavriksha.wgWorkers.Add(1)
-		if config.Delete {
+		if config.CreateStub {
+			go createStubWorker(w)
+		} else if config.Delete {
 			go deleteWorker(w)
 		} else if config.SetTier {
 			go tierWorker(w)
@@ -29,24 +46,60 @@ func startWorkers() {
 		}
 	}
 
-	go createJobs()
-
-	pendingCount := config.NumberOfDirs * config.NumberOfFiles
-	completecount := int64(0)
-
-	for job := range kalpavriksha.results {
-		completecount++
-
-		fmt.Printf("Worker %d => %s : %s (%s), job Completion %0.2f\n",
-			job.workerId, job.objtype, job.path, job.status,
-			float64(completecount)*100/float64(pendingCount))
-
-		if completecount == pendingCount {
-			close(kalpavriksha.results)
+	if config.CreateStub {
+		// Push the root directory to the queue
+		kalpavriksha.jobs <- workItem{
+			path:    "",
+			objtype: EObjectType.DIR(),
+			status:  EJobStatusType.WAIT(),
 		}
-	}
 
-	kalpavriksha.wgWorkers.Wait()
+		completecount := 0
+		tickerCount := 0
+		ticker := time.Tick(time.Duration(20 * time.Second))
+
+		for {
+			select {
+			case job := <-kalpavriksha.results:
+				completecount++
+				log.Printf("Stub created for %v by %v (%v)\n", job.path, job.workerId, job.status)
+				tickerCount = 0
+			case <-ticker:
+				tickerCount++
+				if atomic.LoadInt64(&WaitCount) == int64(config.Parallelism) {
+					if tickerCount > 3 {
+						close(kalpavriksha.jobs)
+						kalpavriksha.wgWorkers.Wait()
+						close(kalpavriksha.results)
+						log.Printf("Number of stubs created %d\n", completecount)
+						fmt.Printf("Number of stubs created %d\n", completecount)
+						return
+					}
+				} else {
+					tickerCount = 0
+				}
+			}
+		}
+
+	} else {
+		go createJobs()
+
+		pendingCount := config.NumberOfDirs * config.NumberOfFiles
+		completecount := int64(0)
+
+		for job := range kalpavriksha.results {
+			completecount++
+
+			log.Printf("Worker %d => %s : %s (%s), job Completion %0.2f\n",
+				job.workerId, job.objtype, job.path, job.status,
+				float64(completecount)*100/float64(pendingCount))
+
+			if completecount == pendingCount {
+				close(kalpavriksha.results)
+			}
+		}
+		kalpavriksha.wgWorkers.Wait()
+	}
 }
 
 func createJobs() {
@@ -66,7 +119,7 @@ func createJobs() {
 func uploadWorker(w int) {
 	defer kalpavriksha.wgWorkers.Done()
 	for job := range kalpavriksha.jobs {
-		//fmt.Printf("(%d) %s\n", w, job.path)
+		log.Printf("(%d) %s\n", w, job.path)
 		job.workerId = w
 
 		job.status = EJobStatusType.INPROGRESS()
@@ -110,7 +163,7 @@ func getUploadOptions(data []byte) *UploadOptions {
 func deleteWorker(w int) {
 	defer kalpavriksha.wgWorkers.Done()
 	for job := range kalpavriksha.jobs {
-		//fmt.Printf("(%d) %s\n", w, job.path)
+		log.Printf("(%d) %s\n", w, job.path)
 		job.workerId = w
 
 		job.status = EJobStatusType.INPROGRESS()
@@ -130,7 +183,7 @@ func deleteWorker(w int) {
 func tierWorker(w int) {
 	defer kalpavriksha.wgWorkers.Done()
 	for job := range kalpavriksha.jobs {
-		//fmt.Printf("(%d) %s\n", w, job.path)
+		log.Printf("(%d) %s\n", w, job.path)
 		job.workerId = w
 
 		job.status = EJobStatusType.INPROGRESS()
@@ -143,5 +196,69 @@ func tierWorker(w int) {
 		}
 
 		kalpavriksha.results <- job
+	}
+}
+
+// Workers for delete task
+func createStubWorker(w int) {
+	defer kalpavriksha.wgWorkers.Done()
+	for job := range kalpavriksha.jobs {
+		atomic.AddInt64(&WaitCount, -1)
+
+		//log.Printf("(%d) %s\n", w, job.path)
+		job.workerId = w
+		job.status = EJobStatusType.INPROGRESS()
+
+		// List the items
+		pager := kalpavriksha.storage.ListBlobs(job.path)
+
+		// Iterate blob prefixes
+		for pager.More() {
+			resp, err := pager.NextPage(context.TODO())
+			if err == nil {
+				for _, item := range resp.Segment.BlobPrefixes {
+					dirPath := *item.Name
+					if dirPath[len(dirPath)-1] == '/' {
+						dirPath = dirPath[:len(dirPath)-1]
+					}
+
+					// Get properties of directory
+					_, err = kalpavriksha.storage.GetProperties(dirPath)
+					if bloberror.HasCode(err, bloberror.BlobNotFound) {
+						// Create stub if 404
+						err = kalpavriksha.storage.CreateStub(dirPath)
+
+						w := workItem{
+							path:     dirPath + "/",
+							workerId: job.workerId,
+							objtype:  EObjectType.DIR(),
+							status:   EJobStatusType.SUCCESS(),
+						}
+
+						if err != nil {
+							log.Printf("Failed to create stub %s (%s)\n", dirPath, err.Error())
+							w.status = EJobStatusType.FAILED()
+						}
+
+						kalpavriksha.results <- w
+					} else {
+						// log.Printf("Stub already exists for %s\n", dirPath)
+					}
+
+					// Insert this directory for further iteration to main queue
+					go func() {
+						kalpavriksha.jobs <- workItem{
+							path:    dirPath + "/",
+							objtype: EObjectType.DIR(),
+							status:  EJobStatusType.WAIT(),
+						}
+					}()
+				}
+			} else {
+				log.Printf("Failed to get list of blobs %s\n", job.path)
+				break
+			}
+		}
+		atomic.AddInt64(&WaitCount, 1)
 	}
 }

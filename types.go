@@ -116,6 +116,7 @@ func (a *ObjectType) Parse(s string) error {
 const (
 	EnvAzStorageAccount          = "AZURE_STORAGE_ACCOUNT"
 	EnvAzStorageAccessKey        = "AZURE_STORAGE_ACCESS_KEY"
+	EnvAzStorageSAS              = "AZURE_STORAGE_SAS_TOKEN"
 	EnvAzStorageAccountContainer = "AZURE_STORAGE_ACCOUNT_CONTAINER"
 )
 

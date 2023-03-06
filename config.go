@@ -26,6 +26,8 @@ type kalpavrikshaConfig struct {
 
 	Delete  bool // Delete the previously generated data on given path
 	SetTier bool // Change Tier of previously generated data on given path
+
+	CreateStub bool // Create directory stub files on the given path
 }
 
 type Kalpavriksha struct {

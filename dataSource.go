@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -108,7 +109,7 @@ func (fds *fileDataSource) Init(i interface{}) error {
 	}
 
 	if int64(n) < fds.fileDataSourceConfig.filesize {
-		fmt.Printf("Size : %d, FileSize : %d, remaining will be filled with 0s\n", fds.fileDataSourceConfig.filesize, n)
+		log.Printf("Size : %d, FileSize : %d, remaining will be filled with 0s\n", fds.fileDataSourceConfig.filesize, n)
 	}
 
 	f.Close()

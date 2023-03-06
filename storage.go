@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	golog "log"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/log"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/JeffreyRichter/enum/enum"
 )
 
@@ -56,6 +59,7 @@ func (a *StorageType) Parse(s string) error {
 type StorageConfig struct {
 	StorageAccountName      string // Name of the destination storage account
 	StorageAccountKey       string // Key of the destination storage account
+	StorageAccountSAS       string // SAS Key of the destination storage account
 	StorageEndPoint         string // Type of storage account blob/dfs
 	StorageAccountContainer string // Destination container in the storage account
 
@@ -80,6 +84,9 @@ type Storage interface {
 	UploadData(name string, data []byte, o *UploadOptions) error
 	Delete(name string, o *DeleteOptions) error
 	SetTier(name string, tier blob.AccessTier) error
+	CreateStub(name string) error
+	ListBlobs(name string) *runtime.Pager[container.ListBlobsHierarchyResponse]
+	GetProperties(name string) (blob.GetPropertiesResponse, error)
 }
 
 func setupLogging() {
@@ -99,7 +106,7 @@ func setupLogging() {
 				respCode := msg[index : index+3]
 				respCodeVal, _ := strconv.Atoi(respCode)
 				if respCodeVal >= 400 {
-					fmt.Println("Request failed with status code ", respCode)
+					golog.Printf("Request failed with status code %v\n", respCode)
 				}
 			}
 			break
@@ -114,6 +121,7 @@ func readStorageParams() {
 	config.AccountType = EStorageType.BLOB()
 	config.StorageAccountName = os.Getenv(EnvAzStorageAccount)
 	config.StorageAccountKey = os.Getenv(EnvAzStorageAccessKey)
+	config.StorageAccountSAS = os.Getenv(EnvAzStorageSAS)
 	config.StorageAccountContainer = os.Getenv(EnvAzStorageAccountContainer)
 }
 

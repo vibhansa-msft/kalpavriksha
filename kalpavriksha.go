@@ -3,14 +3,22 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
 )
 
 func main() {
+	file, err := os.OpenFile("kalpavriksha.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.SetOutput(file)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	fmt.Println("Kalpavrikhsa starting")
 
 	// Parse the user config
 	flag.Parse()
-	var err error
 
 	// Sanitize the config
 	if err = sanitizeConfig(); err != nil {
@@ -56,4 +64,6 @@ func init() {
 
 	flag.BoolVar(&config.Delete, "delete", false, "Delete the data set instead of generation")
 	flag.BoolVar(&config.SetTier, "set-tier", false, "Change the tier of previously generated dataset")
+
+	flag.BoolVar(&config.CreateStub, "create-stub", false, "Create directory stub on the given path")
 }

@@ -28,6 +28,7 @@ Generate test data directly in your storage account.
 
 - AZURE_STORAGE_ACCOUNT : Storage account name
 - AZURE_STORAGE_ACCESS_KEY : Storage account key
+- AZURE_STORAGE_SAS_TOKEN : SAS Token for Storage account 
 - AZURE_STORAGE_ACCOUNT_CONTAINER : Container name where generated data will be stored
 
 ## Example
