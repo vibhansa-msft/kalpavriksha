@@ -23,6 +23,7 @@ Generate test data directly in your storage account.
 - --tier \<tier\> : Tier to be set for each file uploaded to container.
 - --delete true|false : Delete previously generated data using this tool
 - --set-tier true|false : Change tier of previously generated data set. Provie --tier parameter along with this.
+- --create-stub true|false : Create directory stubs recursively for given path.
 
 ## Environment Variables
 
