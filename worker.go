@@ -60,9 +60,8 @@ func startWorkers() {
 
 		for {
 			select {
-			case job := <-kalpavriksha.results:
+			case _ = <-kalpavriksha.results:
 				completecount++
-				log.Printf("Stub created for %v by %v (%v)\n", job.path, job.workerId, job.status)
 				tickerCount = 0
 			case <-ticker:
 				tickerCount++
@@ -205,7 +204,6 @@ func createStubWorker(w int) {
 	for job := range kalpavriksha.jobs {
 		atomic.AddInt64(&WaitCount, -1)
 
-		//log.Printf("(%d) %s\n", w, job.path)
 		job.workerId = w
 		job.status = EJobStatusType.INPROGRESS()
 
@@ -216,6 +214,9 @@ func createStubWorker(w int) {
 		for pager.More() {
 			resp, err := pager.NextPage(context.TODO())
 			if err == nil {
+				fmt.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
+					job.workerId, job.path, *resp.Marker, *resp.NextMarker)
+
 				for _, item := range resp.Segment.BlobPrefixes {
 					dirPath := *item.Name
 					if dirPath[len(dirPath)-1] == '/' {
@@ -223,27 +224,26 @@ func createStubWorker(w int) {
 					}
 
 					// Get properties of directory
-					_, err = kalpavriksha.storage.GetProperties(dirPath)
-					if bloberror.HasCode(err, bloberror.BlobNotFound) {
-						// Create stub if 404
-						err = kalpavriksha.storage.CreateStub(dirPath)
-
-						w := workItem{
-							path:     dirPath + "/",
-							workerId: job.workerId,
-							objtype:  EObjectType.DIR(),
-							status:   EJobStatusType.SUCCESS(),
-						}
-
-						if err != nil {
-							log.Printf("Failed to create stub %s (%s)\n", dirPath, err.Error())
-							w.status = EJobStatusType.FAILED()
-						}
-
-						kalpavriksha.results <- w
+					err = kalpavriksha.storage.CreateStub(dirPath)
+					if err == nil {
+						log.Printf("(%d) Stub creatd for %s", job.workerId, dirPath)
+					} else if bloberror.HasCode(err, bloberror.BlobAlreadyExists) {
+						log.Printf("(%d) Stub already exists for %s\n", job.workerId, dirPath)
 					} else {
-						// log.Printf("Stub already exists for %s\n", dirPath)
+						log.Printf("(%d) Failed to create stub unknown error : %s\n", job.workerId, err.Error())
 					}
+
+					w := workItem{
+						path:     dirPath + "/",
+						workerId: job.workerId,
+						objtype:  EObjectType.DIR(),
+						status:   EJobStatusType.SUCCESS(),
+					}
+					if err != nil {
+						w.status = EJobStatusType.FAILED()
+					}
+
+					kalpavriksha.results <- w
 
 					// Insert this directory for further iteration to main queue
 					go func() {
@@ -255,8 +255,8 @@ func createStubWorker(w int) {
 					}()
 				}
 			} else {
-				log.Printf("Failed to get list of blobs %s\n", job.path)
-				break
+				log.Printf("(%d) Failed to get list of blobs %s, Marker : %s\n", job.workerId, job.path, *resp.NextMarker)
+				time.Sleep(5 * time.Second)
 			}
 		}
 		atomic.AddInt64(&WaitCount, 1)

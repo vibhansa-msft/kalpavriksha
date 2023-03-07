@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -19,7 +20,7 @@ type BlobStorage struct {
 }
 
 func (bs *BlobStorage) Init() error {
-	if bs.StorageAccountSAS == "" {
+	if bs.StorageAccountKey != "" {
 		// Create credential object using storage account name and key
 		cred, err := azblob.NewSharedKeyCredential(bs.StorageAccountName, bs.StorageAccountKey)
 		if err != nil {
@@ -31,13 +32,15 @@ func (bs *BlobStorage) Init() error {
 		if err != nil {
 			return err
 		}
-	} else {
+	} else if bs.StorageAccountSAS != "" {
 		var err error
 		containerURL := fmt.Sprintf("https://%s.%s.core.windows.net/%s?%s", bs.StorageAccountName, bs.StorageEndPoint, bs.StorageAccountContainer, bs.StorageAccountSAS)
 		bs.StorageClient, err = container.NewClientWithNoCredential(containerURL, nil)
 		if err != nil {
 			return err
 		}
+	} else {
+		fmt.Errorf("Invalid authentication config\n")
 	}
 
 	return nil
@@ -109,7 +112,14 @@ func (bs *BlobStorage) SetTier(name string, tier blob.AccessTier) error {
 func (bs *BlobStorage) CreateStub(name string) error {
 	blockBlobClient := bs.StorageClient.NewBlockBlobClient(filepath.Join(bs.DestinationPath, name))
 	_, err := blockBlobClient.UploadBuffer(context.TODO(), nil,
-		&blockblob.UploadBufferOptions{Metadata: map[string]*string{"hdi_isfolder": to.Ptr("true")}})
+		&blockblob.UploadBufferOptions{
+			Metadata: map[string]*string{"hdi_isfolder": to.Ptr("true")},
+			AccessConditions: &blob.AccessConditions{
+				ModifiedAccessConditions: &blob.ModifiedAccessConditions{
+					IfNoneMatch: to.Ptr(azcore.ETag("*")),
+				},
+			},
+		})
 	return err
 }
 
