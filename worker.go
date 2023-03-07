@@ -55,6 +55,18 @@ func startWorkers() {
 			status:  EJobStatusType.WAIT(),
 		}
 
+		go func() {
+			t := time.Tick(time.Duration(60 * time.Second))
+			log.Printf("Starting monitor")
+
+			for {
+				select {
+				case <-t:
+					log.Printf("Completed item count: %v", atomic.LoadInt64(&totalProcessedCount))
+				}
+			}
+		}()
+
 		completecount := 0
 		tickerCount := 0
 		ticker := time.Tick(time.Duration(20 * time.Second))
@@ -86,18 +98,6 @@ func startWorkers() {
 
 		pendingCount := config.NumberOfDirs * config.NumberOfFiles
 		completecount := int64(0)
-
-		go func() {
-			t := time.Tick(time.Duration(60 * time.Second))
-			log.Printf("Starting monitor")
-
-			for {
-				select {
-				case <-t:
-					log.Printf("Completed item count: %v", atomic.LoadInt64(&totalProcessedCount))
-				}
-			}
-		}()
 
 		for job := range kalpavriksha.results {
 			completecount++

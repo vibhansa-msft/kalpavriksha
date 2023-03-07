@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 )
 
@@ -12,6 +14,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	http.ListenAndServe("localhost:8080", nil)
 
 	log.SetOutput(file)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
