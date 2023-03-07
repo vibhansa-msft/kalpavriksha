@@ -110,14 +110,6 @@ func startWorkers() {
 				close(kalpavriksha.results)
 			}
 		}
-		go func() {
-			t := time.Tick(time.Duration(60 * time.Second))
-
-			select {
-			case <-t:
-				log.Printf("Completed item count: %v", atomic.LoadInt64(&totalProcessedCount))
-			}
-		}()
 
 		kalpavriksha.wgWorkers.Wait()
 	}
