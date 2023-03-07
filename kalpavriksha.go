@@ -15,7 +15,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.ListenAndServe("localhost:8080", nil)
+	go func() {
+		http.ListenAndServe("localhost:8080", nil)
+	}()
 
 	log.SetOutput(file)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
