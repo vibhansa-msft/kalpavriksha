@@ -48,6 +48,7 @@ func init() {
 	config = kalpavrikshaConfig{}
 
 	flag.Int64Var(&config.NumberOfDirs, "dirs", 1, "Number of directories to be created")
+	flag.Int64Var(&config.DirDepth, "depth", 0, "Number of sub-directory inside which file will be created")
 	flag.Int64Var(&config.NumberOfFiles, "files", 1, "Number of files to be created per directory")
 	flag.Int64Var(&config.FileSize, "size", 1, "Size of each file to be created")
 	flag.IntVar(&config.Parallelism, "concurrency", 64, "Number of threads to run in parllel")
@@ -66,4 +67,5 @@ func init() {
 	flag.BoolVar(&config.SetTier, "set-tier", false, "Change the tier of previously generated dataset")
 
 	flag.BoolVar(&config.CreateStub, "create-stub", false, "Create directory stub on the given path")
+	flag.BoolVar(&config.DeleteStub, "delete-stub", false, "Delete directory stub on the given path")
 }

@@ -24,6 +24,7 @@ Generate test data directly in your storage account.
 - --delete true|false : Delete previously generated data using this tool
 - --set-tier true|false : Change tier of previously generated data set. Provie --tier parameter along with this.
 - --create-stub true|false : Create directory stubs recursively for given path.
+- --delete-stub true|false : Delete directory stubs recursively for given path.
 
 ## Environment Variables
 

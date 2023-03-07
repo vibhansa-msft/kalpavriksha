@@ -23,7 +23,7 @@ var WaitCount int64 = 0
 func startWorkers() {
 	kalpavriksha.wgWorkers = sync.WaitGroup{}
 
-	if config.CreateStub {
+	if config.CreateStub || config.DeleteStub {
 		kalpavriksha.jobs = make(chan workItem, 10000000)
 		kalpavriksha.results = make(chan workItem, 10000000)
 	} else {
@@ -35,7 +35,7 @@ func startWorkers() {
 
 	for w := 1; w <= config.Parallelism; w++ {
 		kalpavriksha.wgWorkers.Add(1)
-		if config.CreateStub {
+		if config.CreateStub || config.DeleteStub {
 			go createStubWorker(w)
 		} else if config.Delete {
 			go deleteWorker(w)
@@ -46,7 +46,7 @@ func startWorkers() {
 		}
 	}
 
-	if config.CreateStub {
+	if config.CreateStub || config.DeleteStub {
 		// Push the root directory to the queue
 		kalpavriksha.jobs <- workItem{
 			path:    "",
@@ -102,10 +102,16 @@ func startWorkers() {
 }
 
 func createJobs() {
+	depth := ""
+	for i := int64(0); i < config.DirDepth; i++ {
+		depth += fmt.Sprintf("%d/", i+1)
+	}
+
 	for d := (int64)(0); d < config.NumberOfDirs; d++ {
 		for f := (int64)(0); f < config.NumberOfFiles; f++ {
+			name := fmt.Sprintf("dir-%d/%sfile-%d", d, depth, f)
 			kalpavriksha.jobs <- workItem{
-				path:    fmt.Sprintf("dir-%d/file-%d", d, f),
+				path:    name,
 				objtype: EObjectType.FILE(),
 				status:  EJobStatusType.WAIT(),
 			}
@@ -230,13 +236,20 @@ func createStubWorker(w int) {
 					}
 
 					// Get properties of directory
-					err = kalpavriksha.storage.CreateStub(dirPath)
-					if err == nil {
-						log.Printf("(%d) Stub creatd for %s", job.workerId, dirPath)
-					} else if bloberror.HasCode(err, bloberror.BlobAlreadyExists) {
-						log.Printf("(%d) Stub already exists for %s\n", job.workerId, dirPath)
-					} else {
-						log.Printf("(%d) Failed to create stub unknown error : %s\n", job.workerId, err.Error())
+					if config.CreateStub {
+						err = kalpavriksha.storage.CreateStub(dirPath)
+						if err == nil {
+							log.Printf("(%d) Stub creatd for %s", job.workerId, dirPath)
+						} else if bloberror.HasCode(err, bloberror.BlobAlreadyExists) {
+							log.Printf("(%d) Stub already exists for %s\n", job.workerId, dirPath)
+						} else {
+							log.Printf("(%d) Failed to create stub unknown error : %s\n", job.workerId, err.Error())
+						}
+					} else if config.DeleteStub {
+						err = kalpavriksha.storage.Delete(dirPath, nil)
+						if err == nil {
+							log.Printf("(%d) Stub deleted for %s", job.workerId, dirPath)
+						}
 					}
 
 					w := workItem{

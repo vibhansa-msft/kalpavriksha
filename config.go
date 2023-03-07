@@ -14,6 +14,7 @@ type kalpavrikshaConfig struct {
 
 	// Base config for what to do
 	NumberOfDirs  int64 // Number of directories to be created
+	DirDepth      int64 // Number of sub-directories to be created inside each directory
 	NumberOfFiles int64 // Number of files to be created
 	FileSize      int64 // Size of each file to be created
 	Parallelism   int   // Number of threads to run in parallel
@@ -28,6 +29,7 @@ type kalpavrikshaConfig struct {
 	SetTier bool // Change Tier of previously generated data on given path
 
 	CreateStub bool // Create directory stub files on the given path
+	DeleteStub bool // Delete directory stub files on the given path
 }
 
 type Kalpavriksha struct {
