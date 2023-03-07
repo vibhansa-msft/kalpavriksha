@@ -105,7 +105,7 @@ func setupLogging() {
 				index += len(responseStatusString) + 1
 				respCode := msg[index : index+3]
 				respCodeVal, _ := strconv.Atoi(respCode)
-				if respCodeVal >= 400 && respCodeVal != 404 {
+				if respCodeVal >= 400 && respCodeVal != 404 && respCodeVal != 409 {
 					golog.Printf("Request failed with status code %v (%s)\n", respCode, msg)
 				}
 			}
