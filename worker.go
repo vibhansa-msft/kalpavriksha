@@ -210,13 +210,17 @@ func createStubWorker(w int) {
 		// List the items
 		pager := kalpavriksha.storage.ListBlobs(job.path)
 
+		listCnt := uint64(0)
 		// Iterate blob prefixes
 		for pager.More() {
 			resp, err := pager.NextPage(context.TODO())
 			if err == nil {
+				listCnt += uint64(len(resp.Segment.BlobItems))
+
 				if resp.Marker != nil && resp.NextMarker != nil {
-					fmt.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
-						job.workerId, job.path, *resp.Marker, *resp.NextMarker)
+					//log.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
+					//	job.workerId, job.path, *resp.Marker, *resp.NextMarker)
+					log.Printf("(%d) Path : %s, Current Count: %d\n", job.workerId, job.path, listCnt)
 				}
 
 				for _, item := range resp.Segment.BlobPrefixes {
