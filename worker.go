@@ -19,6 +19,7 @@ type workItem struct {
 }
 
 var WaitCount int64 = 0
+var totalProcessedCount int64 = 0
 
 func startWorkers() {
 	kalpavriksha.wgWorkers = sync.WaitGroup{}
@@ -97,6 +98,15 @@ func startWorkers() {
 				close(kalpavriksha.results)
 			}
 		}
+		go func() {
+			t := time.Tick(time.Duration(60 * time.Second))
+
+			select {
+			case <-t:
+				log.Printf("Completed item count: %v", atomic.LoadInt64(&totalProcessedCount))
+			}
+		}()
+
 		kalpavriksha.wgWorkers.Wait()
 	}
 }
@@ -222,12 +232,16 @@ func createStubWorker(w int) {
 			resp, err := pager.NextPage(context.TODO())
 			if err == nil {
 				listCnt += uint64(len(resp.Segment.BlobItems))
-
-				if resp.Marker != nil && resp.NextMarker != nil {
-					//log.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
-					//	job.workerId, job.path, *resp.Marker, *resp.NextMarker)
-					log.Printf("(%d) Path : %s, Current Count: %d\n", job.workerId, job.path, listCnt)
+				if listCnt > 100000 {
+					atomic.AddInt64(&totalProcessedCount, int64(listCnt))
+					listCnt = 0
 				}
+
+				//if resp.Marker != nil && resp.NextMarker != nil {
+				//	//log.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
+				//	//	job.workerId, job.path, *resp.Marker, *resp.NextMarker)
+				//	log.Printf("(%d) Path : %s, Current Count: %d\n", job.workerId, job.path, listCnt)
+				//}
 
 				for _, item := range resp.Segment.BlobPrefixes {
 					dirPath := *item.Name
@@ -278,6 +292,7 @@ func createStubWorker(w int) {
 				time.Sleep(5 * time.Second)
 			}
 		}
+		atomic.AddInt64(&totalProcessedCount, int64(listCnt))
 		atomic.AddInt64(&WaitCount, 1)
 	}
 }
