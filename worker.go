@@ -214,8 +214,10 @@ func createStubWorker(w int) {
 		for pager.More() {
 			resp, err := pager.NextPage(context.TODO())
 			if err == nil {
-				fmt.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
-					job.workerId, job.path, *resp.Marker, *resp.NextMarker)
+				if resp.Marker != nil && resp.NextMarker != nil {
+					fmt.Printf("(%d) Path : %s, Current Marker : %s, Next Marker : %s\n",
+						job.workerId, job.path, *resp.Marker, *resp.NextMarker)
+				}
 
 				for _, item := range resp.Segment.BlobPrefixes {
 					dirPath := *item.Name
